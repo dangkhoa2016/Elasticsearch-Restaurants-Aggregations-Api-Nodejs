@@ -1,0 +1,24 @@
+{
+  "name": "elasticsearch-restaurants-api",
+  "version": "1.0.0",
+  "description": "",
+  "main": "nodemon index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "DEBUG=elasticsearch-restaurants-api-nodejs* nodemon index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@elastic/elasticsearch": "^7.13.0",
+    "debug": "^4.3.3",
+    "fastify": "^3.24.1",
+    "fastify-cors": "^6.0.2",
+    "fastify-elasticsearch": "^2.0.0",
+    "fastify-formbody": "^5.2.0",
+    "fastify-plugin": "^3.0.0",
+    "nodemon": "^2.0.15",
+    "qs": "^6.10.1"
+  }
+}
