@@ -1,0 +1,27 @@
+curl -X POST 'http://localhost:8080/search' \
+  -H 'content-type: application/json' \
+  --data-raw '{"queries":{"all_states":["AU-NSW"],"most_density_cities":[],"primary_cuisines":[],"most_serve_dining_styles":[],"least_serve_dining_styles":[]},"sorts":{},"from":0,"size":24,"index":"restaurants"}'
+
+curl -X POST 'localhost:8080/search' \
+  -H 'content-type: application/json' \
+  --data-raw '{"queries":{"all_states":["AU-NSW","AU-QLD"],"most_density_cities":["Sydney","Richmond"],"primary_cuisines":["Modern Australian","Seafood"],"most_serve_dining_styles":["Teppanyaki Grill","Bagels"],"least_serve_dining_styles":["Brunch"],"yes_no_features_bar":"0","yes_no_takeout":"0","missing_legacy_photos":"1","has_order_online_links":"2","searchText":{"value":"","method":"0","field":"name"},"published_on":null},"sorts":{},"from":0,"size":24,"index":"restaurants"}'
+
+curl -X POST 'localhost:8080/search' \
+  -H 'content-type: application/json' \
+  --data-raw '{"queries":{"all_states":[],"most_density_cities":[],"primary_cuisines":[],"most_serve_dining_styles":[],"least_serve_dining_styles":[],"yes_no_takeout":"0","missing_legacy_photos":"2","has_order_online_links":"1","searchText":{"value":"","method":"0","field":"name"}},"sorts":{},"from":0,"size":24,"index":"restaurants"}'
+
+curl -X POST 'localhost:8080/search' \
+-H 'Content-Type: application/json' \
+--data-raw '{"queries":{"all_states":["AU-NSW"],"most_density_cities":["Sydney"],"yes_no_takeout":"0","missing_legacy_photos":"2","has_order_online_links":"1","searchText":{"value":"","method":"0","field":"name"}},"sorts":{},"from":0,"size":24,"index":"restaurants"}'
+
+curl -X POST 'localhost:8080/search' \
+  -H 'Content-Type: application/json' \
+  --data '{"queries":{"all_states":["AU-NSW"]}}'
+
+curl -X GET 'localhost:8080/?test=home'
+
+curl -X GET 'localhost:8080/doc/53516'
+
+curl -X GET 'localhost:8080/not-found'
+
+curl -X GET 'localhost:8080/search'
