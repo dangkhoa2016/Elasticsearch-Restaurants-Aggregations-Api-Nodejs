@@ -1,4 +1,6 @@
-const { Client } = require('@elastic/elasticsearch');
+// const { Client } = require('@elastic/elasticsearch');
+const { Client } = require('@opensearch-project/opensearch');
+
 const debug = require('debug')('elasticsearch-restaurants-aggregations-api-nodejs:client');
 
 const { ELASTICSEARCH_URL = 'http://localhost:9200' } = process.env;

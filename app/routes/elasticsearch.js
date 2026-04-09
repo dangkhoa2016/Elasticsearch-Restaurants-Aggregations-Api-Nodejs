@@ -28,7 +28,7 @@ function timeout(ms) {
 }
 
 async function routes(fastify, options) {
-  const elastic = fastify.elastic;
+  const elastic = fastify.opensearch;
   // debug('elastic', elastic, fastify, options);
 
   fastify.post('/search', { searchSchema }, async (request, reply) => {

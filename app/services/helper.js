@@ -476,7 +476,7 @@ const convert_to_es_search_params = function (params) {
       if (!value)
         return null;
 
-      // debug('item.queries', item.queries);
+      debug('item.queries', item.queries);
       var query = item.queries.find(q => {
         if (q.key) {
           if ((Array.isArray(value) === false && Array.isArray(q.key) && q.key.includes(value.toString())) || q.key === value)

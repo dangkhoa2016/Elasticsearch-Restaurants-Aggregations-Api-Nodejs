@@ -7,9 +7,9 @@ const server = require('fastify')({
   logger: false
 });
 
-server.register(require('fastify-formbody'), { parser: str => qs.parse(str) });
+server.register(require('@fastify/formbody'), { parser: str => qs.parse(str) });
 
-server.register(require('fastify-cors'), {
+server.register(require('@fastify/cors'), {
   origin: (origin, cb) => {
     // allow all
     cb(null, true);
@@ -26,7 +26,7 @@ server.register(require('fastify-cors'), {
   }
 });
 
-server.register(require('fastify-elasticsearch'), { client });
+server.register(require('@fastify/opensearch'), { client });
 
 server.register(require('./routes/home'));
 server.register(require('./routes/elasticsearch'));
