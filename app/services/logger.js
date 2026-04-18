@@ -6,7 +6,7 @@ module.exports = fp((server, opts, next) => {
   const now = () => Date.now();
 
   server.addHook('preHandler', function(req, reply, done) {
-    reply.startTime = now();
+    // do not overwrite startTime here; it is already set in onRequest
     if (req.body)
       debug({ info: 'parse body', body: req.body })
 
@@ -14,6 +14,7 @@ module.exports = fp((server, opts, next) => {
   });
 
   server.addHook('onRequest', (req, reply, done) => {
+    // startTime is set once here so that durationMs in onResponse covers the full request lifecycle
     reply.startTime = now();
     debug({ info: 'received request', url: req.raw.url, id: req.id })
 

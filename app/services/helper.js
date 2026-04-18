@@ -301,169 +301,171 @@ const convert_sort = function (sorts) {
 
 const add_search_text = function (queries, searchTextOptions) {
   var { value, method, field } = searchTextOptions || {};
-  if (value) {
-    var arrTexts = [];
+  // guard against missing value or field to prevent TypeError on .toLowerCase()
+  if (!value || !field)
+    return;
 
-    switch (field.toLowerCase()) {
-      case 'name':
-        switch (method) {
-          case '1':
-            arrTexts.push({
-              'term': {
-                'name.lowercase_starts_with_text': value.toLowerCase()
-              }
-            });
-            break;
-          case '2':
-            arrTexts.push({
-              'term': {
-                'name.lowercase_ends_with_text': value.toLowerCase()
-              }
-            });
-            break;
-          case '3':
-            arrTexts.push({
-              'term': {
-                'name': value.toLowerCase()
-              }
-            });
-            break;
-          case '4':
-            arrTexts.push({
-              'term': {
-                'name.keyword': value
-              }
-            });
-            break;
-          default:
-            arrTexts.push({
-              'match': {
-                'name': value
-              }
-            });
-            break;
-        }
-        break;
-      case 'description':
-        switch (method) {
-          case '1':
-            arrTexts.push({
-              'match_phrase_prefix': {
-                'description': {
-                  query: value
-                }
-              }
-            });
-            break;
-          case '3':
-            arrTexts.push({
-              'match': {
-                'description': {
-                  query: value,
-                  operator: 'and'
-                }
-              }
-            });
-            break;
-          case '4':
-            arrTexts.push({
-              'match_phrase': {
-                'description': {
-                  query: value
-                }
-              }
-            });
-            break;
-          default:
-            arrTexts.push({
-              'match': {
-                'description': {
-                  query: value
-                }
-              }
-            });
-            break;
-        };
-        break;
-      case 'contact_phone':
-        switch (method) {
-          case '1':
-            arrTexts.push({
-              'wildcard': {
-                'contactInformation': `${value}*`
-              }
-            });
-            break;
-          case '2':
-            arrTexts.push({
-              'wildcard': {
-                'contactInformation': `*${value}`
-              }
-            });
-            break;
-          case '3':
-            arrTexts.push({
-              'wildcard': {
-                'contactInformation': `*${value}*`
-              }
-            });
-            break;
-          case '4':
-            arrTexts.push({
-              'term': {
-                'contactInformation': value
-              }
-            });
-            break;
-          default:
-            arrTexts.push({
-              'match_phrase': {
-                'contactInformation': value
-              }
-            });
-            break;
-        }
-        break;
-      case 'address_line1':
-        switch (method) {
-          case '1':
-            arrTexts.push({
-              'prefix': {
-                'address.line1.keyword': value.toLowerCase()
-              }
-            });
-            break;
-          case '3':
-            arrTexts.push({
-              'match_phrase_prefix': {
-                'address.line1': value
-              }
-            });
-            break;
-          case '4':
-            arrTexts.push({
-              'match_phrase': {
-                'address.line1.keyword': value
-              }
-            });
-            break;
-          default:
-            arrTexts.push({
-              'match_phrase': {
-                'address.line1': value
-              }
-            });
-            break;
-        }
-        break;
-    }
+  var arrTexts = [];
 
-    if (arrTexts.length > 0) {
-      if (!queries['must'])
-        queries['must'] = arrTexts;
-      else
-        queries['must'] = queries['must'].concat(arrTexts);
-    }
+  switch (field.toLowerCase()) {
+    case 'name':
+      switch (method) {
+        case '1':
+          arrTexts.push({
+            'term': {
+              'name.lowercase_starts_with_text': value.toLowerCase()
+            }
+          });
+          break;
+        case '2':
+          arrTexts.push({
+            'term': {
+              'name.lowercase_ends_with_text': value.toLowerCase()
+            }
+          });
+          break;
+        case '3':
+          arrTexts.push({
+            'term': {
+              'name': value.toLowerCase()
+            }
+          });
+          break;
+        case '4':
+          arrTexts.push({
+            'term': {
+              'name.keyword': value
+            }
+          });
+          break;
+        default:
+          arrTexts.push({
+            'match': {
+              'name': value
+            }
+          });
+          break;
+      }
+      break;
+    case 'description':
+      switch (method) {
+        case '1':
+          arrTexts.push({
+            'match_phrase_prefix': {
+              'description': {
+                query: value
+              }
+            }
+          });
+          break;
+        case '3':
+          arrTexts.push({
+            'match': {
+              'description': {
+                query: value,
+                operator: 'and'
+              }
+            }
+          });
+          break;
+        case '4':
+          arrTexts.push({
+            'match_phrase': {
+              'description': {
+                query: value
+              }
+            }
+          });
+          break;
+        default:
+          arrTexts.push({
+            'match': {
+              'description': {
+                query: value
+              }
+            }
+          });
+          break;
+      }
+      break;
+    case 'contact_phone':
+      switch (method) {
+        case '1':
+          arrTexts.push({
+            'wildcard': {
+              'contactInformation': `${value}*`
+            }
+          });
+          break;
+        case '2':
+          arrTexts.push({
+            'wildcard': {
+              'contactInformation': `*${value}`
+            }
+          });
+          break;
+        case '3':
+          arrTexts.push({
+            'wildcard': {
+              'contactInformation': `*${value}*`
+            }
+          });
+          break;
+        case '4':
+          arrTexts.push({
+            'term': {
+              'contactInformation': value
+            }
+          });
+          break;
+        default:
+          arrTexts.push({
+            'match_phrase': {
+              'contactInformation': value
+            }
+          });
+          break;
+      }
+      break;
+    case 'address_line1':
+      switch (method) {
+        case '1':
+          arrTexts.push({
+            'prefix': {
+              'address.line1.keyword': value.toLowerCase()
+            }
+          });
+          break;
+        case '3':
+          arrTexts.push({
+            'match_phrase_prefix': {
+              'address.line1': value
+            }
+          });
+          break;
+        case '4':
+          arrTexts.push({
+            'match_phrase': {
+              'address.line1.keyword': value
+            }
+          });
+          break;
+        default:
+          arrTexts.push({
+            'match_phrase': {
+              'address.line1': value
+            }
+          });
+          break;
+      }
+      break;
+  }
+
+  if (arrTexts.length > 0) {
+    if (!queries['must'])
+      queries['must'] = arrTexts;
+    else
+      queries['must'] = queries['must'].concat(arrTexts);
   }
 };
 
