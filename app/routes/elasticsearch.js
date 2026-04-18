@@ -11,6 +11,7 @@ const {
   // convert_sort
 } = require('../services/helper');
 
+// schema must be wrapped in { schema: { body: ... } } for Fastify to pick it up
 const searchSchema = {
   type: 'object',
   properties: {
@@ -21,7 +22,11 @@ const searchSchema = {
     sorts: { type: 'object' },
     sleep: { type: ['boolean', 'string', 'null'] },
   },
-}
+};
+
+// simple in-memory cache for /filters with configurable TTL (default 5 min)
+const FILTERS_CACHE_TTL_MS = parseInt(process.env.FILTERS_CACHE_TTL_MS) || 5 * 60 * 1000;
+const filtersCache = new Map(); // key: index name → { data, expiresAt }
 
 function timeout(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -32,7 +37,7 @@ async function routes(fastify, options) {
   // debug('elastic', elastic, fastify, options);
 
   fastify.post('/search', { schema: { body: searchSchema } }, async (request, reply) => {
-    var { index = default_index, queries = {}, sleep, size = default_size, sorts, from = 0 } = request.body;
+    const { index = default_index, queries = {}, sleep, size: rawSize = default_size, sorts, from: rawFrom = 0 } = request.body;
 
     // only allow indices from the whitelist
     if (!allowed_indices.includes(index)) {
@@ -40,13 +45,14 @@ async function routes(fastify, options) {
     }
 
     // validate and clamp size/from before passing to helper
-    if (size) size = parseInt(size);
+    let size = parseInt(rawSize);
     if (!size || size < 0 || size > 50) size = default_size;
-    if (from) from = parseInt(from);
+    let from = parseInt(rawFrom);
     if (!from || from < 0) from = 0;
 
-    var { query, sort } = convert_to_es_search_params({ queries, sorts, size, from });
-    //for test
+    const { query, sort } = convert_to_es_search_params({ queries, sorts, size, from });
+
+    // for test
     if (sleep)
       await timeout(5000);
 
@@ -64,11 +70,18 @@ async function routes(fastify, options) {
   });
 
   fastify.get('/filters', async function (request, reply) {
-    var { index = default_index } = request.query;
+    const { index = default_index } = request.query;
 
     // only allow indices from the whitelist
     if (!allowed_indices.includes(index)) {
       return reply.code(400).send({ error: 'Invalid index.' });
+    }
+
+    // serve from cache if still fresh
+    const cached = filtersCache.get(index);
+    if (cached && Date.now() < cached.expiresAt) {
+      debug('/filters served from cache for index:', index);
+      return cached.data;
     }
 
     try {
@@ -78,7 +91,9 @@ async function routes(fastify, options) {
         size: 0
       });
       debug('/filters result aggs', body);
-      return get_filters_for_ui(body.aggregations);
+      const data = get_filters_for_ui(body.aggregations);
+      filtersCache.set(index, { data, expiresAt: Date.now() + FILTERS_CACHE_TTL_MS });
+      return data;
     } catch (ex) {
       // return 500 instead of 200 with { err: ... } body
       debug('Error get aggs', ex);

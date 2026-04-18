@@ -5,9 +5,10 @@ const debug = require('debug')('elasticsearch-restaurants-aggregations-api-nodej
 
 const { ELASTICSEARCH_URL = 'http://localhost:9200' } = process.env;
 
+// removed healthcheck: false — allows the client to detect connection failures on startup
 const client = new Client({
   node: ELASTICSEARCH_URL,
-  healthcheck: false
+  // healthcheck: false
 });
 
 client.on('request', (err, result) => {

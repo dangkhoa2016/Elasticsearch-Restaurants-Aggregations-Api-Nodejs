@@ -8,6 +8,11 @@ async function routes(fastify, options) {
     return { message: 'Welcome to Elasticsearch Restaurants Aggregations Api Nodejs.' };
   });
 
+  // health check endpoint for load balancers / monitoring
+  fastify.get('/health', async (request, reply) => {
+    return { status: 'ok', timestamp: new Date().toISOString() };
+  });
+
   // use async fs.promises.readFile to avoid blocking the event loop
   fastify.get('/favicon.ico', async (request, reply) => {
     const buffer = await fs.readFile('./app/imgs/favicon.ico');

@@ -2,9 +2,12 @@ const debug = require('debug')('elasticsearch-restaurants-aggregations-api-nodej
 const qs = require('qs');
 const client = require('./services/elasticsearch_client');
 
+// enable Fastify's built-in Pino logger; level read from env (default 'warn' in prod, 'info' otherwise)
 const server = require('fastify')({
   // disableRequestLogging: true,
-  logger: false
+  logger: {
+    level: process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'warn' : 'info'),
+  },
 });
 
 server.register(require('@fastify/formbody'), { parser: str => qs.parse(str) });
@@ -26,6 +29,12 @@ server.register(require('@fastify/cors'), {
   }
 });
 
+// rate limiting — max 100 requests per minute per IP by default, configurable via env
+server.register(require('@fastify/rate-limit'), {
+  max: parseInt(process.env.RATE_LIMIT_MAX) || 100,
+  timeWindow: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 60 * 1000,
+});
+
 server.register(require('@fastify/opensearch'), { client });
 
 server.register(require('./routes/home'));
@@ -33,12 +42,14 @@ server.register(require('./routes/elasticsearch'));
 server.register(require('./routes/errors'));
 server.register(require('./services/logger'));
 
+// standardized error response format { error, message }
 server.decorate('exception', (request, reply) => {
-  reply.code(500).send({ 'error': '500 Internal Server Error.', msg: 'Please go home' });
+  reply.code(500).send({ error: 'Internal Server Error', message: 'An unexpected error occurred.' });
 });
 
 server.setErrorHandler((error, request, reply) => {
   debug('Server Error', error);
+  server.log.error(error);
   return server.exception(request, reply);
 });
 

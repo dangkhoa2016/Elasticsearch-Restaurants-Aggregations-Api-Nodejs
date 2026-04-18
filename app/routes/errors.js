@@ -2,9 +2,10 @@ const debug = require('debug')('elasticsearch-restaurants-aggregations-api-nodej
 
 async function routes(fastify, options) {
 
+  // standardized error response format { error, message }
   fastify.decorate('notFound', (request, reply) => {
     debug('requested url', request.url);
-    reply.code(404).send({ 'error': '404 Route not found.', msg: 'Please go home' });
+    reply.code(404).send({ error: 'Not Found', message: 'The requested route does not exist.' });
   });
 
   fastify.get('/404', async (request, reply) => {

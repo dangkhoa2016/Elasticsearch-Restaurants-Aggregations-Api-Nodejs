@@ -7,280 +7,12 @@ const allowed_indices = (process.env.ALLOWED_INDICES || default_index)
   .filter(Boolean);
 const debug = require('debug')('elasticsearch-restaurants-aggregations-api-nodejs:helper');
 
-const key_aggregations = [
-  {
-    "name": "published_on",
-    "type": "date-range-filter",
-    "aggs": [{
-      "key": "published_on",
-      "title": "Published On",
-      "query": {
-        "date_range": {
-          "field": "published_on",
-          "missing": "1900-01-01",
-          "ranges": [
-            {
-              "key": "Last 7 days",
-              "from": "now-1w/d",
-              "to": "now/d"
-            },
-            {
-              "key": "Last 14 days",
-              "from": "now-2w/d",
-              "to": "now/d"
-            },
-            {
-              "key": "Last month",
-              "from": "now-1M/d",
-              "to": "now/d"
-            },
-            {
-              "key": "Last 2 months",
-              "from": "now-2M/d",
-              "to": "now/d"
-            }
-          ]
-        }
-      }
-    }],
-    "queries": [{
-      "type": "filter",
-      "range": {
-        "published_on": {
-          "gte": "",
-          "lte": ""
-        }
-      }
-    }]
-  },
-  {
-    "name": "address_states",
-    "type": "multiple-checkbox-filter",
-    "aggs": [{
-      "key": "all_states",
-      "title": "All States",
-      "query": {
-        "terms": {
-          "field": "address.state.keyword",
-          "missing": "N/A"
-        }
-      }
-    }],
-    "queries": [{
-      "type": "filter",
-      "terms": {
-        "address.state.keyword": []
-      }
-    }]
-  },
-  {
-    "name": "address_cities",
-    "type": "multiple-checkbox-filter",
-    "aggs": [{
-      "key": "most_density_cities",
-      "title": "Most Density Cities",
-      "query": {
-        "terms": {
-          "field": "address.city.keyword",
-          "size": 10,
-          "missing": "N/A"
-        }
-      }
-    }],
-    "queries": [{
-      "type": "filter",
-      "terms": {
-        "address.city.keyword": []
-      }
-    }]
-  },
-  {
-    "name": "primary_cuisines",
-    "type": "multiple-checkbox-filter",
-    "aggs": [{
-      "key": "primary_cuisines",
-      "title": "Primary Cuisines",
-      "query": {
-        "terms": {
-          "size": 10,
-          "field": "primaryCuisine",
-          "missing": "N/A"
-        }
-      }
-    }],
-    "queries": [{
-      "type": "filter",
-      "terms": {
-        "primaryCuisine": []
-      }
-    }]
-  },
-  {
-    "name": "dining_styles",
-    "type": "multiple-checkbox-filter",
-    "aggs": [{
-      "key": "most_serve_dining_styles",
-      "title": "Most Serve Dining Styles",
-      "query": {
-        "terms": {
-          "size": 10,
-          "field": "diningStyles.keyword",
-          "missing": "N/A"
-        }
-      }
-    }, {
-      "key": "least_serve_dining_styles",
-      "title": "Least Serve Dining Styles",
-      "query": {
-        "terms": {
-          "size": 10,
-          "field": "diningStyles.keyword",
-          "missing": "N/A",
-          "order": {
-            "_count": "asc"
-          }
-        }
-      }
-    }],
-    "queries": [{
-      "type": "filter",
-      "terms": {
-        "diningStyles.keyword": []
-      }
-    }]
-  },
-  {
-    "name": "features_bar",
-    "type": "boolean-radio-filter",
-    "aggs": [{
-      "key": "yes_no_features_bar",
-      "title": "Features: Bar",
-      "query": {
-        "terms": {
-          "field": "features.bar"
-        }
-      }
-    }, {
-      "key": "missing_features_bar",
-      "title": "Features: Bar",
-      "query": {
-        "missing": {
-          "field": "features.bar"
-        }
-      }
-    }],
-    "queries": [{
-      "key": ["0", "1"],
-      "type": "filter",
-      "terms": {
-        "features.bar": []
-      }
-    }, {
-      "key": ["2"],
-      "type": "must_not",
-      "exists": {
-        "field": "features.bar"
-      }
-    }]
-  },
-  {
-    "name": "has_takeout",
-    "type": "boolean-radio-filter",
-    "aggs": [{
-      "key": "yes_no_takeout",
-      "title": "Has Takeout",
-      "query": {
-        "terms": {
-          "field": "hasTakeout"
-        }
-      }
-    }],
-    "queries": [{
-      "key": ["0", "1"],
-      "type": "filter",
-      "terms": {
-        "hasTakeout": []
-      }
-    }]
-  },
-  {
-    "name": "legacy_photos",
-    "type": "has-or-missing-filter",
-    "aggs": [{
-      "key": "missing_legacy_photos",
-      "title": "Has Legacy Photos",
-      "query": {
-        "missing": {
-          "field": "photos.legacy.url.keyword"
-        }
-      }
-    }, {
-      "key": "has_legacy_photos",
-      "title": "Has Legacy Photos",
-      "query": {
-        "filter": {
-          "exists": {
-            "field": "photos.legacy.url.keyword"
-          }
-        }
-      }
-    }],
-    "queries": [{
-      "key": ["1"],
-      "type": "must",
-      "exists": {
-        "field": "photos.legacy.url.keyword"
-      }
-    }, {
-      "key": ["2"],
-      "type": "must_not",
-      "exists": {
-        "field": "photos.legacy.url.keyword"
-      }
-    }]
-  },
-  {
-    "name": "order_online_links",
-    "type": "has-or-missing-filter",
-    "aggs": [{
-      "key": "has_order_online_links",
-      "title": "Has Order Online Links",
-      "query": {
-        "filter": {
-          "exists": {
-            "field": "orderOnlineLink.keyword"
-          }
-        }
-      }
-    }, {
-      "key": "missing_order_online_links",
-      "title": "Has Order Online Links",
-      "query": {
-        "missing": {
-          "field": "orderOnlineLink.keyword"
-        }
-      }
-    }],
-    "queries": [{
-      "key": ["1"],
-      "type": "must",
-      "exists": {
-        "field": "orderOnlineLink.keyword"
-      }
-    }, {
-      "key": ["2"],
-      "type": "must_not",
-      "exists": {
-        "field": "orderOnlineLink.keyword"
-      }
-    }]
-  },
-];
+const key_aggregations = require('./aggregations.config');
 
 const get_filter_aggregations = function () {
-  var z = {};
-  key_aggregations.map(item => {
-    item.aggs.map(x => {
+  const z = {};
+  key_aggregations.forEach(item => {
+    item.aggs.forEach(x => {
       z[x.key] = x.query;
     });
   });
@@ -300,12 +32,12 @@ const convert_sort = function (sorts) {
 };
 
 const add_search_text = function (queries, searchTextOptions) {
-  var { value, method, field } = searchTextOptions || {};
+  const { value, method, field } = searchTextOptions || {};
   // guard against missing value or field to prevent TypeError on .toLowerCase()
   if (!value || !field)
     return;
 
-  var arrTexts = [];
+  const arrTexts = [];
 
   switch (field.toLowerCase()) {
     case 'name':
@@ -470,21 +202,21 @@ const add_search_text = function (queries, searchTextOptions) {
 };
 
 const convert_to_es_search_params = function (params) {
-  var main = {};
+  const main = {};
 
   if (!params)
     return { query: { match_all: {} } };
 
-  var { queries, sorts } = params;
+  const { queries, sorts } = params;
 
-  key_aggregations.map(item => {
-    item.aggs.map(x => {
-      var value = queries[x.key];
+  key_aggregations.forEach(item => {
+    item.aggs.forEach(x => {
+      let value = queries[x.key];
       if (!value)
-        return null;
+        return;
 
       debug('item.queries', item.queries);
-      var query = item.queries.find(q => {
+      let query = item.queries.find(q => {
         if (q.key) {
           if ((Array.isArray(value) === false && Array.isArray(q.key) && q.key.includes(value.toString())) || q.key === value)
             return q;
@@ -497,7 +229,7 @@ const convert_to_es_search_params = function (params) {
       else
         query = structuredClone(item.queries[0]);
 
-      var type = query.type;
+      const type = query.type;
 
       if (type) {
         if (!main[type])
@@ -509,7 +241,7 @@ const convert_to_es_search_params = function (params) {
         } else {
           // debug('value', value, query);
           if (query.terms) {
-            var key = Object.keys(query.terms)[0];
+            const key = Object.keys(query.terms)[0];
             if (Array.isArray(value) === false)
               value = [value === '0' ? false : true];
             query.terms[key] = value;
@@ -565,13 +297,13 @@ const convert_to_es_search_params = function (params) {
 };
 
 const get_filters_for_ui = function (aggregations) {
-  var result = [];
+  const result = [];
   if (!aggregations || Object.keys(aggregations).length === 0)
     return result;
 
-  key_aggregations.map(item => {
-    item.aggs.map(x => {
-      var found = result.find(a => a.title == x.title);
+  key_aggregations.forEach(item => {
+    item.aggs.forEach(x => {
+      let found = result.find(a => a.title == x.title);
       if (!found) {
         found = { name: x.key, title: x.title, options: [], type: item.type };
         result.push(found);
@@ -613,9 +345,9 @@ const get_filters_for_ui = function (aggregations) {
 
 const remove_empty_filters = function (arr) {
   return arr.filter(filter => {
-    var keys_1 = Object.keys(filter)[0];
-    var keys_2 = Object.keys(filter[keys_1])[0];
-    var values = filter[keys_1][keys_2];
+    const keys_1 = Object.keys(filter)[0];
+    const keys_2 = Object.keys(filter[keys_1])[0];
+    let values = filter[keys_1][keys_2];
     if (Array.isArray(values) && values.length > 0) {
       values = values.filter(f => f !== null);
       filter[keys_1][keys_2] = values;
