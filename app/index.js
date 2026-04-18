@@ -9,20 +9,20 @@ const server = require('fastify')({
 
 server.register(require('@fastify/formbody'), { parser: str => qs.parse(str) });
 
+// read allowed origins from env CORS_ORIGINS (comma-separated)
+// If not set → allow all origins (dev-friendly); set in production to restrict
+const corsOrigins = process.env.CORS_ORIGINS
+  ? process.env.CORS_ORIGINS.split(',').map(s => s.trim()).filter(Boolean)
+  : null;
+
 server.register(require('@fastify/cors'), {
   origin: (origin, cb) => {
-    // allow all
-    cb(null, true);
-
-    /* allow special host
-    if (/localhost/.test(origin)) {
-      //  Request from localhost will pass
+    // Requests with no origin header (curl, server-to-server) are always allowed
+    if (!origin || !corsOrigins || corsOrigins.includes(origin)) {
       cb(null, true);
-      return;
+    } else {
+      cb(new Error('Not allowed by CORS'));
     }
-    // Generate an error on other origins, disabling access
-    cb(new Error("Not allowed"));
-    */
   }
 });
 

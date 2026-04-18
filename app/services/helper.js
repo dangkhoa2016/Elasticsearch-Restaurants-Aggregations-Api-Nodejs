@@ -1,5 +1,10 @@
-const default_index = 'restaurants';
+const default_index = process.env.DEFAULT_INDEX || 'restaurants';
 const default_size = 24;
+// list of allowed query indices, read from env ALLOWED_INDICES (comma-separated)
+const allowed_indices = (process.env.ALLOWED_INDICES || default_index)
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
 const debug = require('debug')('elasticsearch-restaurants-aggregations-api-nodejs:helper');
 
 const key_aggregations = [
@@ -484,10 +489,11 @@ const convert_to_es_search_params = function (params) {
         }
       });
 
+      // use structuredClone for a deep copy to avoid mutating the global key_aggregations
       if (query)
-        query = Object.assign({}, query);
+        query = structuredClone(query);
       else
-        query = Object.assign({}, item.queries[0]);
+        query = structuredClone(item.queries[0]);
 
       var type = query.type;
 
@@ -620,8 +626,9 @@ module.exports = {
   key_aggregations,
   get_filter_aggregations,
   default_index,
+  default_size,
+  allowed_indices,
   get_filters_for_ui,
   convert_to_es_search_params,
   convert_sort,
-  default_size
 };
