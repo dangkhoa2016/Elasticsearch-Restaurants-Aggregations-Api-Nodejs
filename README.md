@@ -5,9 +5,9 @@
 
 ## About
 
-A REST API built with **Fastify** and **Node.js** that demonstrates using Elasticsearch/OpenSearch to search and filter restaurant data through aggregations. It serves as the backend for the [Elasticsearch-Restautants-Aggregations-UI](https://github.com/dangkhoa2016/Elasticsearch-Restautants-Aggregations-UI) frontend.
+A REST API built with **Fastify** and **Node.js** that demonstrates using Elasticsearch/OpenSearch to search and filter restaurant data through aggregations. It serves as the backend for the [Elasticsearch-Restaurants-Aggregations-UI](https://github.com/dangkhoa2016/Elasticsearch-Restaurants-Aggregations-UI) frontend.
 
-## Tech Stack
+## Technologies Used
 
 | Layer | Technology |
 |---|---|
@@ -17,6 +17,8 @@ A REST API built with **Fastify** and **Node.js** that demonstrates using Elasti
 | ES Client | `@opensearch-project/opensearch` |
 | Body parser | `qs` + `@fastify/formbody` |
 | CORS | `@fastify/cors` |
+| Rate limiting | `@fastify/rate-limit` |
+| Logging | Fastify logger (Pino) + `debug` |
 | Dev server | nodemon |
 
 ## Project Structure
@@ -25,21 +27,24 @@ A REST API built with **Fastify** and **Node.js** that demonstrates using Elasti
 app/
 ├── index.js                  # Fastify server setup, plugin registration
 ├── routes/
-│   ├── home.js               # GET / and favicon routes
+│   ├── home.js               # GET /, GET /health, favicon routes
 │   ├── elasticsearch.js      # POST /search, GET /filters, GET /doc/:id
 │   └── errors.js             # 404 / 500 error handlers
 └── services/
+    ├── aggregations.config.js   # Static aggregation/filter definitions
     ├── elasticsearch_client.js  # OpenSearch client initialisation
-    ├── helper.js                # Aggregation definitions & query builders
-    └── logger.js               # Request/response lifecycle hooks
+    ├── helper.js                # Query builders + UI filter mapping helpers
+    └── logger.js                # Request/response lifecycle hooks
 bin/
 └── www                       # Entry point – loads .env.local and starts server
+test/
+└── helper.test.js            # Unit tests for helper/service behavior
 ```
 
 ## API Endpoints
 
 ### `GET /`
-Health-check / welcome message.
+Welcome message.
 
 ```json
 { "message": "Welcome to Elasticsearch Restaurants Aggregations Api Nodejs." }
@@ -47,19 +52,28 @@ Health-check / welcome message.
 
 ---
 
+### `GET /health`
+Lightweight health endpoint for load balancers and uptime checks.
+
+```json
+{ "status": "ok", "timestamp": "2026-04-18T12:34:56.789Z" }
+```
+
+---
+
 ### `GET /filters?index=<index>`
-Returns all available aggregation filters for the UI (states, cities, cuisines, dining styles, boolean toggles, etc.).
+Returns all available aggregation filters for the UI (states, cities, cuisines, dining styles, boolean toggles, etc.). Results are cached in memory for 5 minutes by default.
 
 **Query params**
 
 | Param | Default | Description |
 |---|---|---|
-| `index` | `restaurants` | Elasticsearch index to aggregate from |
+| `index` | `restaurants` | Elasticsearch index to aggregate from. Must be included in `ALLOWED_INDICES`. |
 
 ---
 
 ### `POST /search`
-Search restaurants with optional filters, sorting and pagination.
+Search restaurants with optional filters, sorting and pagination. The `index` value is validated against `ALLOWED_INDICES` before the OpenSearch query is executed.
 
 **Request body (JSON)**
 
@@ -87,6 +101,17 @@ Search restaurants with optional filters, sorting and pagination.
   }
 }
 ```
+
+**Top-level request fields**
+
+| Field | Type | Description |
+|---|---|---|
+| `index` | `string` | Target index. Defaults to `DEFAULT_INDEX` and must be allowed by `ALLOWED_INDICES`. |
+| `size` | `string \| number` | Page size. Invalid, zero, negative, or values greater than `50` fall back to `24`. |
+| `from` | `string \| number` | Offset for pagination. Invalid or negative values fall back to `0`. |
+| `sorts` | `object` | Sort map in the form `{ fieldName: "asc" \| "desc" \| "0" }`. Entries with value `"0"` are ignored. |
+| `queries` | `object` | Filter payload shown below. |
+| `sleep` | `boolean \| string \| null` | Debug/testing aid. Any truthy value adds an artificial 5-second delay before querying OpenSearch. |
 
 **Filter keys in `queries`**
 
@@ -130,12 +155,20 @@ Search restaurants with optional filters, sorting and pagination.
 ---
 
 ### `GET /doc/:id?index=<index>&_source=<bool>`
-Retrieve a single restaurant document by its Elasticsearch `_id`. Intended for debugging.
+Retrieve a single restaurant document by its Elasticsearch `_id`. This endpoint is intended for debugging and does not currently apply the `ALLOWED_INDICES` whitelist, so it should not be exposed publicly without additional protection.
 
 ---
 
 ### `GET /404` / `GET /500`
 Return sample error responses for testing the error handlers.
+
+```json
+{ "error": "Not Found", "message": "The requested route does not exist." }
+```
+
+```json
+{ "error": "Internal Server Error", "message": "An unexpected error occurred." }
+```
 
 ---
 
@@ -146,15 +179,23 @@ Copy `.env.sample` to `.env.local` and fill in your values:
 ```env
 ELASTICSEARCH_URL=https://user_name:password@your-cluster.bonsaisearch.net
 DEFAULT_INDEX=restaurants
+ALLOWED_INDICES=restaurants
 PORT=8080
+HOST=0.0.0.0
 ```
 
 | Variable | Default | Description |
 |---|---|---|
 | `ELASTICSEARCH_URL` | `http://localhost:9200` | Full URL (with credentials) of the ES/OpenSearch node |
 | `DEFAULT_INDEX` | `restaurants` | Index name used when none is supplied in the request |
+| `ALLOWED_INDICES` | `DEFAULT_INDEX` | Comma-separated whitelist of indices accepted by `/search` and `/filters` |
 | `PORT` | `8080` | HTTP port the server listens on |
 | `HOST` | `0.0.0.0` | Network interface to bind to |
+| `CORS_ORIGINS` | unset | Comma-separated list of allowed origins. If unset, requests from any origin are accepted |
+| `LOG_LEVEL` | `info` in dev, `warn` in production | Fastify logger level |
+| `RATE_LIMIT_MAX` | `100` | Maximum requests per IP within the rate-limit window |
+| `RATE_LIMIT_WINDOW_MS` | `60000` | Rate-limit window in milliseconds |
+| `FILTERS_CACHE_TTL_MS` | `300000` | Cache TTL for the `/filters` response in milliseconds |
 
 > `.env.local` is loaded automatically when `NODE_ENV` is not `production`.
 
@@ -186,15 +227,31 @@ cp .env.sample .env.local
 ### Start the development server
 
 ```bash
-npm start
+npm dev
+# or
+yarn dev
+```
+
+The development server starts with `nodemon`. The `start` script also enables the `DEBUG=elasticsearch-restaurants-aggregations-api-nodejs*` namespace, while Fastify logs via its built-in logger. You should see:
+
+```
+Server listening at http://0.0.0.0:8080
+```
+
+### Start without nodemon
+
+```bash
+npm run start
 # or
 yarn start
 ```
 
-The server starts with `nodemon` and `DEBUG` logging enabled. You should see:
+### Run tests
 
-```
-Server listening at http://0.0.0.0:8080
+```bash
+npm test
+# or
+yarn test
 ```
 
 ---
@@ -204,6 +261,9 @@ Server listening at http://0.0.0.0:8080
 ```bash
 # Welcome
 curl http://localhost:8080/
+
+# Health check
+curl http://localhost:8080/health
 
 # Get all filters
 curl http://localhost:8080/filters
@@ -249,7 +309,19 @@ curl http://localhost:8080/500
 
 ## Notes
 
-- The server allows **all CORS origins** by default. Restrict origins in `app/index.js` for production use.
-- The `sleep` field in the `/search` body adds a 5-second artificial delay (useful for UI loading state tests).
-- `size` is clamped to a maximum of **50** records per request; values outside `[1, 50]` fall back to the default (`24`).
+- Allowed CORS origins are controlled by `CORS_ORIGINS`. If the variable is unset, requests from any origin are accepted.
+- `/filters` uses an in-memory cache with a 5-minute default TTL. Adjust it with `FILTERS_CACHE_TTL_MS`.
+- Rate limiting is enabled by default at `100` requests per minute per IP. Adjust it with `RATE_LIMIT_MAX` and `RATE_LIMIT_WINDOW_MS`.
+- The `sleep` field in the `/search` body adds a 5-second artificial delay when its value is truthy. It is useful for UI loading-state tests, but it should stay disabled in public-facing environments.
+- `size` is capped at **50** records per request. Invalid, zero, negative, or too-large values fall back to the default (`24`). Negative or invalid `from` values fall back to `0`.
+- `GET /doc/:id` is a debug-only route and currently bypasses the index whitelist used by `/search` and `/filters`.
 - If you use a **Bonsai.io v7.10** cluster with the legacy `@elastic/elasticsearch` client you may encounter `ProductNotSupportedError`. Switching to `@opensearch-project/opensearch` (already used in this project) resolves the issue.
+
+
+## Related projects
+
+| Project | Description |
+| --- | --- |
+| [Elasticsearch-Restaurants-Api-Cloudflare-Worker](https://github.com/dangkhoa2016/Elasticsearch-Restaurants-Api-Cloudflare-Worker) | Cloudflare Worker port of the restaurants geo-search API, keeping behaviour parity with the Node.js backend for edge deployment. |
+| [Elasticsearch-Restaurants-Api-NodeJs](https://github.com/dangkhoa2016/Elasticsearch-Restaurants-Api-NodeJs) | Fastify-based geo-search backend for restaurant data on OpenSearch/Elasticsearch, used by the map UI. |
+| [Elasticsearch-Restaurants-Map-UI](https://github.com/dangkhoa2016/Elasticsearch-Restaurants-Map-UI) | Static single-page map interface for finding nearby restaurants with Google Maps and a compatible geo-search backend. |

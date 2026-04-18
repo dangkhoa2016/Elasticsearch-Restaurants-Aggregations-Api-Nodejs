@@ -1,16 +1,23 @@
 {
   "name": "elasticsearch-restaurants-aggregations-api-nodejs",
   "version": "1.0.0",
-  "description": "",
+  "description": "Backend API for restaurant geo-search and aggregations using OpenSearch/Elasticsearch, built with Fastify.",
   "main": "bin/www",
   "scripts": {
     "dev": "DEBUG=elasticsearch-restaurants-aggregations-api-nodejs* nodemon bin/www",
     "start": "node bin/www",
     "test": "node --test test/helper.test.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "elasticsearch",
+    "opensearch",
+    "fastify",
+    "geo-search",
+    "aggregations",
+    "restaurants"
+  ],
+  "author": "Đăng Khoa <i.am@dangkhoa.dev>",
+  "license": "MIT",
   "dependencies": {
     "@fastify/cors": "^11.2.0",
     "@fastify/formbody": "^8.0.2",
